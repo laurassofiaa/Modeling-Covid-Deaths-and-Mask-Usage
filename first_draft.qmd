@@ -1,0 +1,172 @@
+---
+title: "first_draft"
+author: "I. Tulenheimo, L. Toivanen"
+format: pdf
+editor: visual
+---
+
+# TODO:
+
+-   Selvitä smoking datan "highest_qualification" sarakkeen tutkintojen "paremmuus järjestys", eli mikä tutkinto huonoin ja mikä paras (jotta voidaan esim. numeroida tutkinnot huonoimmasta parhaimpaan).
+
+Let us first install missing libraries (if any) and load the library containing the smoking data.
+
+```{r}
+# Let us define a list of needed packages, compare it to the output from installed.packages()[,"Package"] and install the missing packages:
+list.of.packages <- c("openintro", "ggplot2")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# Load the library containing the smoking data and other libraries needed
+library(ggplot2)
+library(openintro)
+smoking_df = smoking
+```
+
+## Visualise the smoking data
+
+Let's first have a quick look at the data:
+
+```{r}
+ggplot(smoking, aes(x = amt_weekends)) +
+  geom_histogram(binwidth = 5)
+
+ggplot(smoking, aes(x = amt_weekdays)) +
+  geom_histogram(binwidth = 5)
+
+ggplot(smoking, aes(x = gender, fill = smoke)) +
+  geom_bar(position = "fill")
+
+ggplot(smoking, aes(x = marital_status, fill = smoke)) +
+  geom_bar(position = "fill")
+```
+
+Let's look at the distribution of smokers w.r.t. highest qualification:
+
+```{r}
+ggplot(smoking, aes(x = highest_qualification, fill = smoke)) +
+  geom_bar(position = "fill") + 
+  # Rotate x-axis labels
+  theme(axis.text.x = element_text(angle = 25, hjust = 1))
+```
+
+Let us also check the number of data points for each qualification:
+
+```{r}
+# Use table function to count the number of rows for each degree
+degree_counts <- table(smoking_df$highest_qualification)
+
+# Print the result
+print(degree_counts)
+```
+
+### Potential research questions
+
+Looking at the histogram plot above, couple of questions arise:
+
+-   What is the trend of smoking as measured by hihgest qualification (i.e does the number of smokers increase or decrease with respect to the education level)?
+
+-   Given the number of smokers for the first seven qualifications (when sorted from lowest to highest degree), how many smokers are there with the highest degree of qualification/education?
+
+### Discussion of potential models
+
+To answer our two questions of interest, we could try to fit for example the following models:
+
+-   (simple) non hierarchical linear model
+
+-   and hierarchical linear model.
+
+## Data preprocessing
+
+Before implementing the actual models, we must do some preprocessing of the data.
+
+First, let us drop the rows that have no information about the education, smoking status or gender, since those are our main interests.
+
+```{r}
+# Count the number of rows before dropping
+rows_before <- nrow(smoking)
+
+# Drop rows with "NA" in the "highest_qualification" or "smoke" columns
+smoking_df <- smoking_df[complete.cases(smoking_df$highest_qualification, smoking_df$smoke, smoking_df$gender), , drop = FALSE]
+
+# Count the number of rows after dropping
+rows_after <- nrow(smoking_df)
+
+# Calculate the number of rows dropped
+rows_dropped <- rows_before - rows_after
+
+# Print the result
+print(smoking_df)
+cat("Number of before filtering:", rows_before, "\n")
+cat("Number of after filtering:", rows_after, "\n")
+cat("Number of rows dropped:", rows_dropped, "\n")
+```
+
+Second, we will need to map the string representation of degrees to numeric values. We will map the degrees from lowest to highest (from 1 to 8):
+
+```{r}
+# Define mapping of degrees to numeric values
+degree_mapping <- c("No Qualification" = 1, "Other/Sub Degree" = 2, "GCSE/CSE" = 3, "GCSE/O Level" = 4, "ONC/BTEC" = 5, "A Levels" = 6, "Higher/Sub Degree" = 7, "Degree" = 8)
+
+# Use factor to map the degrees to numeric values
+smoking_df$highest_qualification_num <- as.numeric(factor(smoking_df$highest_qualification, levels = names(degree_mapping)))
+
+# Print the result
+print(smoking_df)
+```
+
+Degree order from highest to lowest:
+
+1.  No Qualification
+
+2.  Other/Sub Degree
+
+3.  GCSE/CSE
+
+4.  GCSE/O Level
+
+5.  ONC/BTEC
+
+6.  A Levels
+
+7.  Higher/Sub Degree
+
+8.  Degree
+
+```{r}
+ggplot(smoking_df, aes(x = highest_qualification_num, fill = smoke)) +
+  geom_bar(position='fill')
+
+ggplot(smoking, aes(x = age, fill = smoke)) +
+  geom_histogram(position='fill', bnis=30)
+
+ggplot(smoking_df, aes(x = highest_qualification_num, fill = smoke)) +
+  geom_bar()
+
+ggplot(smoking, aes(x = age, fill = smoke)) +
+  geom_histogram(bnis=30)
+```
+
+Third, let us drop the columns that are not needed. Let us have a simple start and only preserve the information about the gender, education, and smoking status.
+
+```{r}
+# List of columns to preserve
+columns_to_preserve <- c("gender", "highest_qualification", "highest_qualification_num", "smoke")
+
+# Select the columns
+smoking_df <- smoking_df[, columns_to_preserve, drop = FALSE]
+
+smoking_df
+```
+
+Playground:
+
+```{r}
+# Use table function to count the number of rows for each degree
+degree_counts <- table(smoking_df$highest_qualification_num)
+
+# Print the result
+print(degree_counts)
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
